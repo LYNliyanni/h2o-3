@@ -27,7 +27,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import static hex.gam.GAMModel.cleanUpInputFrame;
+import static hex.gam.GAMModel.adaptValidFrame;
 import static hex.gam.GamSplines.ThinPlateRegressionUtils.*;
 import static hex.gam.MatrixFrameUtils.GAMModelUtils.copyGLMCoeffs;
 import static hex.gam.MatrixFrameUtils.GAMModelUtils.copyGLMtoGAMModel;
@@ -38,7 +38,8 @@ import static hex.genmodel.utils.ArrayUtils.flat;
 import static hex.glm.GLMModel.GLMParameters.Family.multinomial;
 import static hex.glm.GLMModel.GLMParameters.Family.ordinal;
 import static hex.glm.GLMModel.GLMParameters.GLMType.gam;
-import static hex.util.LinearAlgebraUtils.*;
+import static hex.util.LinearAlgebraUtils.generateOrthogonalComplement;
+import static hex.util.LinearAlgebraUtils.generateQR;
 import static water.util.ArrayUtils.expandArray;
 import static water.util.ArrayUtils.subtract;
 
@@ -662,8 +663,8 @@ public class GAM extends ModelBuilder<GAMModel, GAMModel.GAMParameters, GAMModel
         throw H2OModelBuilderIllegalArgumentException.makeFromBuilder(GAM.this);
       
       if (valid() != null)  // transform the validation frame if present
-        _valid = rebalance(cleanUpInputFrame(getTrainFrame(_parms.valid()), _parms, _gamColNamesCenter, _binvD, _zTranspose, 
-                _knots, _zTransposeCS, _allPolyBasisList, _gamColMeansRaw, _oneOGamColStd), 
+        _valid = rebalance(adaptValidFrame(getTrainFrame(_parms.valid()),_valid,  _parms, _gamColNamesCenter, _binvD,
+                _zTranspose, _knots, _zTransposeCS, _allPolyBasisList, _gamColMeansRaw, _oneOGamColStd), 
                 false, _result+".temporary.valid");
       DKV.put(newTFrame); // This one will cause deleted vectors if add to Scope.track
       Frame newValidFrame = _valid == null ? null : new Frame(_valid);

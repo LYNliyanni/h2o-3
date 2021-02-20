@@ -510,7 +510,7 @@ public class GAMModel extends Model<GAMModel, GAMModel.GAMParameters, GAMModel.G
                                         double[][][] zTranspose, double[][][] knots,
                                         double[][][] zTransposeCS, int[][][] polyBasisList, double[][] gamColMeansRaw, 
                                         double[][] oneOGamColStd) {
-    String[] testNames = adptedF.names();
+    String[] testNames = adptedF.names(); // adptedF contains predictors, gam_columns and extras
     // add gam columns for CS smoothers
     Frame csAugmentedColumns = addCSGamColumns(adptedF, parms, gamColNames, binvD, zTranspose, knots);
     // add gam columns for TP smoothers
@@ -544,6 +544,38 @@ public class GAMModel extends Model<GAMModel, GAMModel.GAMParameters, GAMModel.G
     if (respV != null)
       adptedF.add(parms._response_column, respV);
     return adptedF;
+  }
+
+  public static Frame adaptValidFrame(Frame adptedF, Frame valid, GAMParameters parms, String[][] gamColNames, double[][][] binvD,
+                                        double[][][] zTranspose, double[][][] knots,
+                                        double[][][] zTransposeCS, int[][][] polyBasisList, double[][] gamColMeansRaw,
+                                        double[][] oneOGamColStd) {
+    String[] testNames = adptedF.names(); // adptedF contains predictors, gam_columns and extras
+    // add gam columns for CS smoothers
+    Frame csAugmentedColumns = addCSGamColumns(adptedF, parms, gamColNames, binvD, zTranspose, knots);
+    // add gam columns for TP smoothers
+    Frame tpAugmentedColumns = addTPGamColumns(adptedF, parms, zTransposeCS, zTranspose, polyBasisList,
+            knots, gamColMeansRaw, oneOGamColStd);
+
+    if (csAugmentedColumns == null)
+      csAugmentedColumns = tpAugmentedColumns;
+    else if (tpAugmentedColumns != null)
+      csAugmentedColumns.add(tpAugmentedColumns.names(), tpAugmentedColumns.removeAll());
+    
+    Vec respV = null;
+    Vec weightV = null;
+    if (parms._weights_column != null)  // move weight column to be last column before response column
+      weightV = valid.remove(parms._weights_column);
+    if (ArrayUtils.contains(valid.names(), parms._response_column))
+      respV = valid.remove(parms._response_column);
+    valid.add(csAugmentedColumns.names(), csAugmentedColumns.removeAll());
+    Scope.track(csAugmentedColumns);
+
+    if (weightV != null)
+      valid.add(parms._weights_column, weightV);
+    if (respV != null)
+      valid.add(parms._response_column, respV);
+    return valid;
   }
   
   public static Frame addTPGamColumns(Frame adaptedF, GAMParameters parms, double[][][] zTransposeCS, 
